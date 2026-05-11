@@ -12,7 +12,8 @@ import android.os.IBinder;
 import android.provider.ContactsContract;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
-
+import android.media.audiofx.NoiseSuppressor;
+import android.media.audiofx.AcousticEchoCanceler;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
 import androidx.core.app.NotificationCompat;
@@ -31,7 +32,7 @@ public class VoiceService extends Service {
     private static final String TAG = "VoiceService";
     private static final String CHANNEL_ID = "voice_service_channel";
 
-    private static final String[] WAKE_WORDS = {"hitler", "hey hitler"};
+    private String assistantName;
     private static final Set<String> COMMANDS =
             new HashSet<>(Collections.singletonList("call"));
 
@@ -67,6 +68,10 @@ public class VoiceService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        assistantName = getSharedPreferences(
+                "VoiceAppPrefs",
+                MODE_PRIVATE
+        ).getString("assistant_name", "nova");
         startForeground(1, createNotification());
         initTTS();
         loadContactsIntoCache();
@@ -80,8 +85,22 @@ public class VoiceService extends Service {
 
     @Override
     public void onDestroy() {
+
         super.onDestroy();
-        stopEverything();
+
+        if (!shuttingDown) {
+
+            Intent restartService = new Intent(
+                    getApplicationContext(),
+                    VoiceService.class
+            );
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(restartService);
+            } else {
+                startService(restartService);
+            }
+        }
     }
 
     @Nullable
@@ -181,6 +200,13 @@ public class VoiceService extends Service {
         );
 
         audioRecord.startRecording();
+        if (NoiseSuppressor.isAvailable()) {
+            NoiseSuppressor.create(audioRecord.getAudioSessionId());
+        }
+
+        if (AcousticEchoCanceler.isAvailable()) {
+            AcousticEchoCanceler.create(audioRecord.getAudioSessionId());
+        }
         isListening = true;
 
         new Thread(() -> {
@@ -203,6 +229,7 @@ public class VoiceService extends Service {
 
                         case WAKE:
                             if (isWakeWord(text)) {
+                                updateAssistantState("Listening");
                                 speak("I am listening");
                                 currentMode = Mode.COMMAND;
                                 stageStartTime = System.currentTimeMillis();
@@ -299,21 +326,24 @@ public class VoiceService extends Service {
     }
 
     private void resetToWake() {
+        updateAssistantState("Sleeping");
         activeCommand = null;
         currentMode = Mode.WAKE;
         recognizer.reset();
     }
 
     private boolean isWakeWord(String text) {
-        for (String w : WAKE_WORDS)
-            if (text.contains(w)) return true;
-        return false;
+
+        text = text.toLowerCase();
+
+        return text.contains(assistantName)
+                || text.contains("hey " + assistantName);
     }
 
     private boolean isStopCommand(String text) {
         text = text.toLowerCase();
         return text.contains("stop") || text.contains("bye")
-                || text.contains("leave") || text.contains("go away");
+                || text.contains("leave") || text.contains("go away")|| text.contains("kill it");
     }
 
     private int similarity(String a, String b) {
@@ -336,6 +366,7 @@ public class VoiceService extends Service {
     /* ================= SPEAK ================= */
 
     private void speak(String msg) {
+        updateAssistantState("Speaking");
         if (tts == null) return;
 
         isSpeaking = true;
@@ -398,10 +429,22 @@ public class VoiceService extends Service {
         }
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Hitler's calling")
-                .setContentText("Hitler is listening 🇩🇪")
+                .setContentTitle("Voice Assistant")
+                .setContentText(assistantName + " is listening")
                 .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setOngoing(true)
                 .build();
     }
+    /* ================= state of app ================= */
+    private void updateAssistantState(String state) {
+
+        try {
+
+            MainActivity.assistantState.post(() ->
+                    MainActivity.assistantState.setText(state)
+            );
+
+        } catch (Exception ignored) {}
+    }
+
 }

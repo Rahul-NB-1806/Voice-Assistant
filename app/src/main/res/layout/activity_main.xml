@@ -1,13 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:background="@drawable/bg_gradient">
 
-    <Button
-        android:id="@+id/btnMic"
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🎤 Speak"
-        android:layout_gravity="center"/>
+        android:text="Voice Assistant"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="16dp"/>
 
-</FrameLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tap the mic and speak"
+        android:textSize="18sp"
+        android:textColor="#DDFFFFFF"
+        android:layout_marginBottom="40dp"/>
+
+    <TextView
+        android:id="@+id/txtAssistantState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sleeping"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#80FFFFFF"
+        android:layout_marginBottom="20dp"/>
+
+    <com.google.android.material.card.MaterialCardView
+        android:foreground="@drawable/mic_glow"
+        android:id="@+id/micCard"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        app:cardCornerRadius="70dp"
+        app:cardElevation="20dp"
+        app:cardBackgroundColor="#FFFFFF">
+
+        <ImageButton
+            android:id="@+id/btnMic"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_btn_speak_now"
+            android:scaleType="centerInside"
+            android:padding="30dp"/>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>
